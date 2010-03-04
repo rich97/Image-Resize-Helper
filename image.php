@@ -145,8 +145,9 @@ class ImageHelper extends HtmlHelper
                 if (!mkdir($dir)) {
                     die($dir . ': Unable to create directory.');
                 }
+            } else {
+                die($dir . ': Cannot write to this directory.');
             }
-            die($dir . ': Cannot write to this directory.');
         }
         return true;
 
