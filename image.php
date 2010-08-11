@@ -103,28 +103,73 @@ class ImageHelper extends Helper {
         return false;
     }
 
-    private function __createResized($createFrom, $newX, $newY) {
-        $image = $this->__imageFolder . basename($createFrom);
-        $copyTo = $this->__cacheFolder . $newX . 'x' . $newY . '_' . basename($createFrom);
+    private function __createResized($createFrom, $newW, $newH) {
+        $srcImg = $this->__imageFolder . basename($createFrom);
+        $copyTo = $this->__cacheFolder . $newW . 'x' . $newH . '_' . basename($createFrom);
 
-        if ($p = @getimagesize($image)) {
-            list ($width, $height, $extention) = $p;
-            $resource = call_user_func('imagecreatefrom' . $this->__fileTypes[$extention], $image);
+        list($width, $height) = @getimagesize($srcImg);
+        if ($this->__createImage($srcImg, $copyTo, 0, 0, 0, 0, $newW, $newH, $width, $height)) {
+            return $this->__getCached($createFrom, $newW, $newH);
+        } else {
+            die('Unable to create image "' . $copyTo . '" from "' . $srcImg . '".');
+        }
+    }
 
-            if (function_exists("imagecreatetruecolor") &&
-               ($temp = imagecreatetruecolor($newX, $newY))
-            ) {
-                imagecopyresampled($temp, $resource, 0, 0, 0, 0, $newX, $newY, $width, $height);
-            } elseif ($temp = imagecreate($width, $height)) {
-                imagecopyresized($temp, $resource, 0, 0, 0, 0, $newX, $newY, $width, $height);
+/**
+ * Resize Example
+ * $this->__createImage(
+ *     $temp, $resource,
+ *     0, 0,
+ *     0, 0,
+ *     $newX, $newY,
+ *     $width, $height
+ * );
+ *
+ * Crop Example:
+ * $this->__createImage(
+ *     $temp, $resource,
+ *     0, 0,
+ *     1600, 800,
+ *     500, 700,
+ *     2100-1600, 1500-800
+ * );
+ */
+    private function __createImage(
+        $srcImg, $copyTo,
+        $dstX = 0, $dstY = 0,
+        $srcX = 0, $srcY = 0,
+        $dstW = 0, $dstH = 0,
+        $srcW = 0, $srcH = 0
+    ) {
+        $create = false;
+        if ($p = @getimagesize($srcImg)) {
+            $extension = $p[2];
+            $resource = call_user_func('imagecreatefrom' . $this->__fileTypes[$extension], $srcImg);
+            if ($resource) {
+                $resample = false;
+                if (function_exists('imagecreatetruecolor') && ($temp = @imagecreatetruecolor($dstW, $srcX))) {
+                    $resample = imagecopyresampled(
+                        $temp, $resource,
+                        $dstX, $dstY, $srcX, $srcY, $dstW, $dstH, $srcW, $srcH
+                    );
+                } elseif ($temp = imagecreate($dstW, $dstH)) {
+                    $resample = imagecopyresized(
+                        $temp, $resource,
+                        $dstX, $dstY, $srcX, $srcY, $dstW, $dstH, $srcW, $srcH
+                    );
+                }
+
+                if ($resample) {
+                    $create = call_user_func("image" . $this->__fileTypes[$extension], $temp, $copyTo);
+                }
+
+                imagedestroy($temp);
             }
 
-            call_user_func("image" . $this->__fileTypes[$extention], $temp, $copyTo);
             imagedestroy($resource);
-            imagedestroy($temp);
         }
 
-        return $this->__getCached($createFrom, $newX, $newY);
+        return $create;
     }
 
     private function __makeDir($dir) {
