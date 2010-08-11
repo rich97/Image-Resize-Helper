@@ -8,8 +8,10 @@ class ImageHelper extends Helper {
 
     public $helpers = array('Html');
 
-    private $__cacheName = 'resized';
-    private $__subDir = 'uploads';
+    public $cacheName = 'resized';
+    public $baseDir = null;
+    public $subDir = null;
+
     private $__imageFolder = null;
     private $__cacheFolder = null;
     private $__fileTypes = array(
@@ -21,26 +23,31 @@ class ImageHelper extends Helper {
              'wbmp'
     );
 
-    public function __construct () {
-        $folder =& new Folder();
-
-        $imageDir = Configure::read('Cmp.Files.paths.images');
-        if ($this->__makeDir($imageDir)) {
-            $this->__imageFolder = $folder->slashTerm($imageDir);
+    public function beforeRender() {
+        if (!$this->baseDir) {
+            $this->baseDir = IMAGES;
         }
 
-        $this->__cacheFolder = $this->__imageFolder . $this->__cacheName . DS;
+        $folder =& new Folder();
+        if ($this->__makeDir($this->baseDir)) {
+            $this->__imageFolder = $folder->slashTerm($this->baseDir);
+            if ($this->subDir) {
+                $folder->slashTerm($this->subDir);
+            }
+        }
+
+        $this->__cacheFolder = $this->__imageFolder . $this->cacheName . DS;
         $this->__makeDir($this->__cacheFolder);
     }
 
-    public function maxDimension ($file, $newX = 0, $newY = 0, $htmlAttributes = array(), $maintainAspect = true) {
+    public function maxDimension($file, $newX = 0, $newY = 0, $htmlAttributes = array(), $maintainAspect = true) {
         $full_path = $this->__imageFolder . $file;
 
         if ($p = @getimagesize($full_path)) {
             list ($width, $height) = $p;
             if ($width > $newX || $height > $newY) {
                 if ($maintainAspect) {
-                    list ($newX, $newY) = $this->__getAspectResize($newX, $newY, $width, $height);
+                    list($newX, $newY) = $this->__getAspectResize($newX, $newY, $width, $height);
                 } else {
                     $newX = ($newX === 0) ? $width : $newX;
                     $newY = ($newY === 0) ? $height : $newY;
@@ -59,7 +66,7 @@ class ImageHelper extends Helper {
         }
     }
 
-    private function __getAspectResize ($nX, $nY, $cX, $cY) {
+    private function __getAspectResize($nX, $nY, $cX, $cY) {
         if ($nX == 0) {
             $factor = $nY / $cY;
         }
@@ -76,7 +83,7 @@ class ImageHelper extends Helper {
         );
     }
 
-    private function __getCached ($file, $targetX, $targetY) {
+    private function __getCached($file, $targetX, $targetY) {
         $image = $this->__imageFolder . $file;
         $cImage = $this->__cacheFolder . $targetX . 'x' . $targetY . '_' . $file;
 
@@ -85,12 +92,10 @@ class ImageHelper extends Helper {
 
             if ($width == $targetX  && $height == $targetY) {
                 if (@filemtime($cImage) > @filemtime($image)) {
-
-                    $rel_dir = $this->webroot . $this->themeWeb . IMAGES_URL .
-                               $this->__subDir . DS . $this->__cacheName  . DS;
+                    $rel_dir = DS . IMAGES_URL .  $this->subDir .
+                               DS . $this->cacheName  . DS;
                     $file_name = $width . 'x' . $height . '_' . basename($file);
                     return $rel_dir . $file_name;
-
                 }
             }
         }
@@ -98,7 +103,7 @@ class ImageHelper extends Helper {
         return false;
     }
 
-    private function __createResized ($createFrom, $newX, $newY) {
+    private function __createResized($createFrom, $newX, $newY) {
         $image = $this->__imageFolder . basename($createFrom);
         $copyTo = $this->__cacheFolder . $newX . 'x' . $newY . '_' . basename($createFrom);
 
@@ -125,7 +130,7 @@ class ImageHelper extends Helper {
     private function __makeDir($dir) {
         if (!is_writable($dir)) {
             if (!file_exists($dir)) {
-                if (!mkdir($dir)) {
+                if (!mkdir($dir, 0777, true)) {
                     die($dir . ': Unable to create directory.');
                 }
             } else {
