@@ -49,11 +49,11 @@ class ImageHelper extends Helper {
         }
 
         if (is_string($c = $this->__getCached($file, $newX, $newY))) {
-            return parent::image($c, $htmlAttributes);
+            return $this->Html->image($c, $htmlAttributes);
         }
 
         if (($return = $this->__createResized($file, $newX, $newY)) !== false) {
-            return parent::image($return, $htmlAttributes);
+            return $this->Html->image($return, $htmlAttributes);
         } else {
             return '<div class="error">Unable to resize image.</div>';
         }
