@@ -66,6 +66,9 @@ class ImageHelper extends Helper {
         }
     }
 
+    public function crop() {
+
+    }
 
     private function __createResized($createFrom, $newW, $newH) {
         $srcImg = $this->__imageFolder . basename($createFrom);
@@ -79,8 +82,16 @@ class ImageHelper extends Helper {
         }
     }
 
-    public function __createCropped() {
+    public function __createCropped($createFrom, $left, $right, $top, $bottom) {
+        $srcImg = $this->__imageFolder . basename($createFrom);
+        $copyTo = $this->__cacheFolder . $newW . 'x' . $newH . '_' . basename($createFrom);
 
+        list($width, $height) = @getimagesize($srcImg);
+        $this->__createImage(
+            $srcImg, $copyTo,
+            0, 0, $left, $top,
+            $right - $left, $bottom - $top, $width, $height
+        );
     }
 
     private function __getAspectResize($nX, $nY, $cX, $cY) {
