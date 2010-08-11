@@ -4,9 +4,9 @@
  * made to be a bit more flexible so more resize methods can be added at a later date.
  * Currently only supports maxDimension, which, as the name suggests resizes if it's dimensions are greater than $nexX or $newY.
  */
-App::import('Helper', 'Html');
-class ImageHelper extends HtmlHelper
-{
+class ImageHelper extends Helper {
+
+    public $helpers = array('Html');
 
     private $__cacheName = 'resized';
     private $__subDir = 'uploads';
@@ -21,9 +21,7 @@ class ImageHelper extends HtmlHelper
              'wbmp'
     );
 
-    public function __construct ()
-    {
-
+    public function __construct () {
         $folder =& new Folder();
 
         $imageDir = Configure::read('Cmp.Files.paths.images');
@@ -33,12 +31,9 @@ class ImageHelper extends HtmlHelper
 
         $this->__cacheFolder = $this->__imageFolder . $this->__cacheName . DS;
         $this->__makeDir($this->__cacheFolder);
-
     }
 
-    public function maxDimension ($file, $newX = 0, $newY = 0, $htmlAttributes = array(), $maintainAspect = true)
-    {
-
+    public function maxDimension ($file, $newX = 0, $newY = 0, $htmlAttributes = array(), $maintainAspect = true) {
         $full_path = $this->__imageFolder . $file;
 
         if ($p = @getimagesize($full_path)) {
@@ -62,12 +57,9 @@ class ImageHelper extends HtmlHelper
         } else {
             return '<div class="error">Unable to resize image.</div>';
         }
-
     }
 
-    private function __getAspectResize ($nX, $nY, $cX, $cY)
-    {
-
+    private function __getAspectResize ($nX, $nY, $cX, $cY) {
         if ($nX == 0) {
             $factor = $nY / $cY;
         }
@@ -82,18 +74,15 @@ class ImageHelper extends HtmlHelper
             floor ($cX * $factor),
             floor ($cY * $factor),
         );
-
     }
 
-    private function __getCached ($file, $targetX, $targetY)
-    {
-
+    private function __getCached ($file, $targetX, $targetY) {
         $image = $this->__imageFolder . $file;
         $cImage = $this->__cacheFolder . $targetX . 'x' . $targetY . '_' . $file;
 
         if (file_exists($cImage) && file_exists($image)) {
             list($width, $height) = @getimagesize($cImage);
-    
+
             if ($width == $targetX  && $height == $targetY) {
                 if (@filemtime($cImage) > @filemtime($image)) {
 
@@ -105,14 +94,11 @@ class ImageHelper extends HtmlHelper
                 }
             }
         }
-        
-        return false;
 
+        return false;
     }
 
-    private function __createResized ($createFrom, $newX, $newY)
-    {
-
+    private function __createResized ($createFrom, $newX, $newY) {
         $image = $this->__imageFolder . basename($createFrom);
         $copyTo = $this->__cacheFolder . $newX . 'x' . $newY . '_' . basename($createFrom);
 
@@ -134,12 +120,9 @@ class ImageHelper extends HtmlHelper
         }
 
         return $this->__getCached($createFrom, $newX, $newY);
-
     }
 
-    private function __makeDir($dir)
-    {
-
+    private function __makeDir($dir) {
         if (!is_writable($dir)) {
             if (!file_exists($dir)) {
                 if (!mkdir($dir)) {
@@ -150,9 +133,7 @@ class ImageHelper extends HtmlHelper
             }
         }
         return true;
-
     }
-
 
 }
 ?>
