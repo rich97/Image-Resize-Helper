@@ -66,6 +66,23 @@ class ImageHelper extends Helper {
         }
     }
 
+
+    private function __createResized($createFrom, $newW, $newH) {
+        $srcImg = $this->__imageFolder . basename($createFrom);
+        $copyTo = $this->__cacheFolder . $newW . 'x' . $newH . '_' . basename($createFrom);
+
+        list($width, $height) = @getimagesize($srcImg);
+        if ($this->__createImage($srcImg, $copyTo, 0, 0, 0, 0, $newW, $newH, $width, $height)) {
+            return $this->__getCached($createFrom, $newW, $newH);
+        } else {
+            die('Unable to create image "' . $copyTo . '" from "' . $srcImg . '".');
+        }
+    }
+
+    public function __createCropped() {
+
+    }
+
     private function __getAspectResize($nX, $nY, $cX, $cY) {
         if ($nX == 0) {
             $factor = $nY / $cY;
@@ -101,18 +118,6 @@ class ImageHelper extends Helper {
         }
 
         return false;
-    }
-
-    private function __createResized($createFrom, $newW, $newH) {
-        $srcImg = $this->__imageFolder . basename($createFrom);
-        $copyTo = $this->__cacheFolder . $newW . 'x' . $newH . '_' . basename($createFrom);
-
-        list($width, $height) = @getimagesize($srcImg);
-        if ($this->__createImage($srcImg, $copyTo, 0, 0, 0, 0, $newW, $newH, $width, $height)) {
-            return $this->__getCached($createFrom, $newW, $newH);
-        } else {
-            die('Unable to create image "' . $copyTo . '" from "' . $srcImg . '".');
-        }
     }
 
 /**
