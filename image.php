@@ -136,4 +136,3 @@ class ImageHelper extends Helper {
     }
 
 }
-?>
