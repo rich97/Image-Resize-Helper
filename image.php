@@ -3,6 +3,7 @@
  * Rewrite of the Image Resize Helper in the bakery (http://bakery.cakephp.org/articles/view/image-resize-helper)
  * made to be a bit more flexible so more resize methods can be added at a later date.
  * Currently only supports maxDimension, which, as the name suggests resizes if it's dimensions are greater than $nexX or $newY.
+ * NOTE: sort out variable casing. Some local variables use under_scores others use camelCase.
  */
 class ImageHelper extends Helper {
 
@@ -12,6 +13,8 @@ class ImageHelper extends Helper {
     public $baseDir = null;
     public $subDir = null;
 
+    private $__imageFile = null;
+    private $__cacheFile = null;
     private $__imageFolder = null;
     private $__cacheFolder = null;
     private $__fileTypes = array(
@@ -40,58 +43,91 @@ class ImageHelper extends Helper {
         $this->__makeDir($this->__cacheFolder);
     }
 
-    public function maxDimension($file, $newX = 0, $newY = 0, $htmlAttributes = array(), $maintainAspect = true) {
-        $full_path = $this->__imageFolder . $file;
+    public function maxDimension($file, $newW = 0, $newH = 0, $htmlAttributes = array(), $maintainAspect = true) {
+        $this->__imageFile = $file;
+        $this->__cacheFile = 't0' .
+                             '_l0' .
+                             '_r' . $newW .
+                             '_b' . $newH .
+                             '_' . basename($file);
 
+        if (is_string($cached = $this->__getCached())) {
+            return $this->Html->image($cached, $htmlAttributes);
+        }
+
+        $full_path = $this->__imageFolder . $this->__imageFile;
         if ($p = @getimagesize($full_path)) {
             list ($width, $height) = $p;
-            if ($width > $newX || $height > $newY) {
+            if ($width > $newW || $height > $newH) {
                 if ($maintainAspect) {
-                    list($newX, $newY) = $this->__getAspectResize($newX, $newY, $width, $height);
+                    list($newW, $newH) = $this->__getAspectResize($newW, $newH, $width, $height);
                 } else {
-                    $newX = ($newX === 0) ? $width : $newX;
-                    $newY = ($newY === 0) ? $height : $newY;
+                    $newW = ($newW === 0) ? $width : $newW;
+                    $newH = ($newH === 0) ? $height : $newH;
                 }
             }
         }
 
-        if (is_string($c = $this->__getCached($file, $newX, $newY))) {
-            return $this->Html->image($c, $htmlAttributes);
-        }
-
-        if (($return = $this->__createResized($file, $newX, $newY)) !== false) {
+        if (($return = $this->__createResized($newW, $newH)) !== false) {
             return $this->Html->image($return, $htmlAttributes);
         } else {
             return '<div class="error">Unable to resize image.</div>';
         }
     }
 
-    public function crop() {
+    public function crop($file, $left = 0, $right = 0, $top = 0, $bottom = 0, $htmlAttributes = array()) {
+        $this->__imageFile = $file;
+        $this->__cacheFile = 't' . $top .
+                             '_l' . $left .
+                             '_r' . $right .
+                             '_b' . $bottom .
+                             '_' . basename($file);
 
+        if (is_string($cached = $this->__getCached())) {
+            return $this->Html->image($cached, $htmlAttributes);
+        }
+
+        $width = $right - $left;
+        $height = $bottom - $top;
+
+        if (($return = $this->__createCropped($left, $top, $width, $height)) !== false) {
+            return $this->Html->image($return, $htmlAttributes);
+        } else {
+            return '<div class="error">Unable to crop image.</div>';
+        }
     }
 
-    private function __createResized($createFrom, $newW, $newH) {
-        $srcImg = $this->__imageFolder . basename($createFrom);
-        $copyTo = $this->__cacheFolder . $newW . 'x' . $newH . '_' . basename($createFrom);
+    private function __createResized($newW, $newH) {
+        $srcImg = $this->__imageFolder . $this->__imageFile;
+        $copyTo = $this->__cacheFolder . $this->__cacheFile;
 
         list($width, $height) = @getimagesize($srcImg);
-        if ($this->__createImage($srcImg, $copyTo, 0, 0, 0, 0, $newW, $newH, $width, $height)) {
-            return $this->__getCached($createFrom, $newW, $newH);
+        $create = $this->__createImage(
+            0, 0, 0, 0,
+            $newW, $newH, $width, $height
+        );
+
+        if ($create) {
+            return $this->__getCached();
         } else {
             die('Unable to create image "' . $copyTo . '" from "' . $srcImg . '".');
         }
     }
 
-    public function __createCropped($createFrom, $left, $right, $top, $bottom) {
-        $srcImg = $this->__imageFolder . basename($createFrom);
-        $copyTo = $this->__cacheFolder . $newW . 'x' . $newH . '_' . basename($createFrom);
+    public function __createCropped($left, $top, $width, $height) {
+        $srcImg = $this->__imageFolder . $this->__imageFile;
+        $copyTo = $this->__cacheFolder . $this->__cacheFile;
 
-        list($width, $height) = @getimagesize($srcImg);
-        $this->__createImage(
-            $srcImg, $copyTo,
+        $create = $this->__createImage(
             0, 0, $left, $top,
-            $right - $left, $bottom - $top, $width, $height
+            $width, $height, $width, $height
         );
+
+        if ($create) {
+            return $this->__getCached();
+        } else {
+            die('Unable to create image "' . $copyTo . '" from "' . $srcImg . '".');
+        }
     }
 
     private function __getAspectResize($nX, $nY, $cX, $cY) {
@@ -109,26 +145,6 @@ class ImageHelper extends Helper {
             floor ($cX * $factor),
             floor ($cY * $factor),
         );
-    }
-
-    private function __getCached($file, $targetX, $targetY) {
-        $image = $this->__imageFolder . $file;
-        $cImage = $this->__cacheFolder . $targetX . 'x' . $targetY . '_' . $file;
-
-        if (file_exists($cImage) && file_exists($image)) {
-            list($width, $height) = @getimagesize($cImage);
-
-            if ($width == $targetX  && $height == $targetY) {
-                if (@filemtime($cImage) > @filemtime($image)) {
-                    $rel_dir = DS . IMAGES_URL .  $this->subDir .
-                               DS . $this->cacheName  . DS;
-                    $file_name = $width . 'x' . $height . '_' . basename($file);
-                    return $rel_dir . $file_name;
-                }
-            }
-        }
-
-        return false;
     }
 
 /**
@@ -149,21 +165,26 @@ class ImageHelper extends Helper {
  *     500, 700,
  *     2100-1600, 1500-800
  * );
+ *
+ * NOTE: Move cache retrival to this function
+ * and create option for turnung off the cache.
  */
     private function __createImage(
-        $srcImg, $copyTo,
         $dstX = 0, $dstY = 0,
         $srcX = 0, $srcY = 0,
         $dstW = 0, $dstH = 0,
         $srcW = 0, $srcH = 0
     ) {
         $create = false;
+        $srcImg = $this->__imageFolder . $this->__imageFile;
+        $copyTo = $this->__cacheFolder . $this->__cacheFile;
+
         if ($p = @getimagesize($srcImg)) {
             $extension = $p[2];
             $resource = call_user_func('imagecreatefrom' . $this->__fileTypes[$extension], $srcImg);
             if ($resource) {
                 $resample = false;
-                if (function_exists('imagecreatetruecolor') && ($temp = @imagecreatetruecolor($dstW, $srcX))) {
+                if (function_exists('imagecreatetruecolor') && ($temp = @imagecreatetruecolor($dstW, $dstH))) {
                     $resample = imagecopyresampled(
                         $temp, $resource,
                         $dstX, $dstY, $srcX, $srcY, $dstW, $dstH, $srcW, $srcH
@@ -186,6 +207,28 @@ class ImageHelper extends Helper {
         }
 
         return $create;
+    }
+
+/**
+ * There is no REAL way I can find to tell if the image has been modified
+ * without either using a flag in either a database or a flat file. Without
+ * these it's possible (though unlikley) that an old cached image will get
+ * served up instead of generating a new one, as this method relies on naming
+ * conventions, which are liable to naming conflicts.
+ */
+    private function __getCached() {
+        $image = $this->__imageFolder . $this->__imageFile;
+        $cache = $this->__cacheFolder . $this->__cacheFile;
+
+        if (file_exists($cache) && file_exists($image)) {
+            if (date("YmdHis", @filemtime($image)) > date("YmdHis", @filemtime($cached))) {
+                $rel_dir = DS . IMAGES_URL .  $this->subDir .
+                           DS . $this->cacheName  . DS;
+                return $rel_dir . basename($this->__cacheFile);
+            }
+        }
+
+        return false;
     }
 
     private function __makeDir($dir) {
