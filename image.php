@@ -44,13 +44,7 @@ class ImageHelper extends Helper {
     }
 
     public function maxDimension($file, $newW = 0, $newH = 0, $htmlAttributes = array(), $maintainAspect = true) {
-        $this->__imageFile = $file;
-        $this->__cacheFile = 't0' .
-                             '_l0' .
-                             '_r' . $newW .
-                             '_b' . $newH .
-                             '_' . basename($file);
-
+        $this->__setFileName($file, $left, $right, $top, $bottom);
         if (is_string($cached = $this->__getCached())) {
             return $this->Html->image($cached, $htmlAttributes);
         }
@@ -76,13 +70,7 @@ class ImageHelper extends Helper {
     }
 
     public function crop($file, $left = 0, $right = 0, $top = 0, $bottom = 0, $htmlAttributes = array()) {
-        $this->__imageFile = $file;
-        $this->__cacheFile = 't' . $top .
-                             '_l' . $left .
-                             '_r' . $right .
-                             '_b' . $bottom .
-                             '_' . basename($file);
-
+        $this->__setFileName($file, $left, $right, $top, $bottom);
         if (is_string($cached = $this->__getCached())) {
             return $this->Html->image($cached, $htmlAttributes);
         }
@@ -94,6 +82,14 @@ class ImageHelper extends Helper {
             return $this->Html->image($return, $htmlAttributes);
         } else {
             return '<div class="error">Unable to crop image.</div>';
+        }
+    }
+
+    private function __setFileName($file, $left = null, $right = null, $top = null, $bottom = null) {
+        $this->__imageFile = $file;
+        if (is_int($left)) {
+            $dimensions = 't' . $top . '_l' . $left . '_r' . $right . '_b' . $bottom;
+            $this->__cacheFile = $dimensions . '_' . basename($file);
         }
     }
 
